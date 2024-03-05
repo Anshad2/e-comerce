@@ -60,10 +60,6 @@ class Basket(models.Model):
         return 0
 
 
-
-
-
-
 class BasketItem(models.Model):
     product_object=models.ForeignKey(Product,on_delete=models.CASCADE)
     qty=models.PositiveIntegerField(default=1)
@@ -80,7 +76,18 @@ class BasketItem(models.Model):
         return self.qty*self.product_object.price
 
 
+class Order(models.Model):
 
+    user_object=models.ForeignKey(User,on_delete=models.CASCADE,related_name="purchase")
+    delivery_address=models.CharField(max_length=200)
+    phone=models.CharField(max_length=12)
+    email=models.CharField(max_length=255,null=True)
+    is_paid=models.BooleanField(default=False)
+    total=models.PositiveIntegerField()
+
+
+class OrderItems(models.Model):
+    order_object=models.ForeignKey(Order,on_delete=models.CASCADE,related_name="purchaseitems")
 
 def create_basket(sender,instance,created,**kwargs):
     if created:
