@@ -3,7 +3,7 @@ from django.views.generic import View,DetailView,TemplateView
 from mystore.forms import RegistrationForm,LoginForm
 from django.contrib.auth import authenticate,login,logout
 from django.contrib import messages
-from mystore.models import Product,BasketItem,Size
+from mystore.models import Product,BasketItem,Size,Order,OrderItems
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
 
@@ -154,11 +154,39 @@ class CheckOutView(View):
    def post(self,request,*args,**kwargs):
       email=request.POST.get("email")
       phone=request.POST.get("phone")
-      address=request.POST.get("adress")
-      print(email,phone,address)
-      return redirect("index")
+      address=request.POST.get("address")
+
+      # creating order instance
+      order_obj=Order.objects.create(
+         user_object=request.user,
+         delivery_address=address,
+         phone=phone,
+         email=email,
+         total=request.user.cart.cart_total
+      )
+      # creating order item instance
+      try:
+
+         basket_items=request.user.cart.cart_items
+         for bi in basket_items:
+            OrderItems.objects.create(
+               order_object=order_obj,
+               basket_item_object=bi
+            )
+            bi.is_order_placed=True
+            bi.save()
+         return redirect('index')
+      except:
+         order_obj.delete()
+
+      finally:
+         return redirect('index')
 
 
+
+class OrderSummaryView(View):
+   def get(self,request,*args,**kwargs):
+      return render(request,"summary.html")
 
 class SignOutView(View):
 

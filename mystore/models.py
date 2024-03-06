@@ -88,6 +88,15 @@ class Order(models.Model):
 
 class OrderItems(models.Model):
     order_object=models.ForeignKey(Order,on_delete=models.CASCADE,related_name="purchaseitems")
+    basket_item_object=models.ForeignKey(BasketItem,on_delete=models.CASCADE)
+    option=(
+        ("order-placed","order-placed"),
+        ("intransit","intransit"),
+        ("dispatched","dispatched"),
+        ("delivered","delivered"),
+        ("cancelled","cancelled")
+    )
+    status=models.CharField(max_length=200,choices=option,default="order-placed")
 
 def create_basket(sender,instance,created,**kwargs):
     if created:
