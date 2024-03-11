@@ -186,9 +186,23 @@ class CheckOutView(View):
 
 
 class OrderSummaryView(View):
+
+
    def get(self,request,*args,**kwargs):
-      qs=Order.objects.filter(user_object=request.user)
+      qs=Order.objects.filter(user_object=request.user).exclude(status="cancelled")
       return render(request,"summary.html",{"data":qs})
+   
+
+
+# localhost:8000/order/items{id}/remove
+   
+class OrderItemRemoveView(View):
+
+
+   def get(self,request,*args,**kwargs):
+      id=kwargs.get("pk")
+      OrderItems.objects.get(id=id).delete()
+      return redirect("summary")
    
 
 @method_decorator([signin_required,never_cache],name="dispatch")
