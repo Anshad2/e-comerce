@@ -1,15 +1,20 @@
+import razorpay
+
+
 from django.shortcuts import render,redirect
 from django.views.generic import View,DetailView,TemplateView
 from django.contrib.auth import authenticate,login,logout
 from django.contrib import messages
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
+from django.views.decorators.csrf import csrf_exempt
 
 from mystore.forms import RegistrationForm,LoginForm
 from mystore.models import Product,BasketItem,Size,Order,OrderItems
 from mystore.decorators import signin_required,owner_permission_required
 
-
+KEY_ID="rzp_test_bERsTXMGyCsika"
+KEY_SECRET="gK9lZZ1F2HqaJh5V8X9xY9iY"
 
 # Create your views here.
 class SignupView(View):
@@ -156,6 +161,7 @@ class CheckOutView(View):
       email=request.POST.get("email")
       phone=request.POST.get("phone")
       address=request.POST.get("address")
+      payment_method=request.POST.get("payment")
 
       # creating order instance
       order_obj=Order.objects.create(
@@ -163,7 +169,8 @@ class CheckOutView(View):
          delivery_address=address,
          phone=phone,
          email=email,
-         total=request.user.cart.cart_total
+         total=request.user.cart.cart_total,
+         payment=payment_method
       )
       # creating order item instance
       try:
@@ -180,9 +187,32 @@ class CheckOutView(View):
       except:
          order_obj.delete()
 
+
       finally:
+
+         if payment_method=="online" and order_obj:
+            
+            client = razorpay.Client(auth=(KEY_ID, KEY_SECRET))
+
+            data = { "amount": order_obj.get_order_total*100, "currency": "INR", "receipt": "order_rcptid_11" }
+
+            payment = client.order.create(data=data)
+
+            context = {
+               "key":KEY_ID,
+               "order_id":payment.get("id"),
+               "amount":payment.get("amount")
+
+            }
+            return render(request,"payment.html",{"context":context})
+
+            print("payment_initiated",payment)
+
+
          return redirect('index')
       
+
+
 
 
 class OrderSummaryView(View):
@@ -207,6 +237,7 @@ class OrderItemRemoveView(View):
 
 @method_decorator([signin_required,never_cache],name="dispatch")
 
+
 class SignOutView(View):
 
 
@@ -215,5 +246,15 @@ class SignOutView(View):
         logout(request)
         return redirect("signin")
     
+    
+
+@method_decorator(csrf_exempt,name="dispatch")
+
+class PaymentVerificationView(View):
 
 
+   def post(self,request,*args,**kwargs):
+
+      print(request.POST)
+
+      return render(request,"succsess.html")
