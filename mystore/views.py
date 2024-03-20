@@ -10,7 +10,7 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
 
 from mystore.forms import RegistrationForm,LoginForm
-from mystore.models import Product,BasketItem,Size,Order,OrderItems
+from mystore.models import Product,BasketItem,Size,Order,OrderItems,Category,Tags
 from mystore.decorators import signin_required,owner_permission_required
 
 KEY_ID="rzp_test_bERsTXMGyCsika"
@@ -59,7 +59,21 @@ class IndexView(View):
 
    def get(self,request,*args,**kwargs):
     qs=Product.objects.all()
-    return render(request,"index.html",{"data":qs})
+    categories=Category.objects.all()
+    tags=Tags.objects.all()
+    selected_category=request.GET.get("category")
+    if selected_category:
+       qs=qs.filter(Category_object__name=selected_category)
+    return render(request,"index.html",{"data":qs,"categories":categories,"tags":tags})
+   
+   
+   def post(self,request,*args,**kwargs):
+      tag_name=request.POST.get("tag")
+      qs=Product.objects.filter(tag_objects__name=tag_name)
+
+      return render(request,"index.html",{"data":qs})
+
+
    
         
 @method_decorator([signin_required,never_cache],name="dispatch")
@@ -198,6 +212,10 @@ class CheckOutView(View):
 
             payment = client.order.create(data=data)
 
+            order_obj.order_id=payment.get("id")
+
+            order_obj.save()
+
             context = {
                "key":KEY_ID,
                "order_id":payment.get("id"),
@@ -255,6 +273,25 @@ class PaymentVerificationView(View):
 
    def post(self,request,*args,**kwargs):
 
-      print(request.POST)
+      client = razorpay.Client(auth=(KEY_ID, KEY_SECRET))
+
+      data=request.POST
+
+      try:
+
+         client.utility.verify_payment_signature(data)
+
+         print(data)
+
+         order_obj=Order.objects.get(order_id=data.get("razorpay_order_id"))
+
+         order_obj.is_paid=True
+         
+         order_obj.save()
+
+         print("**********Transaction compleeteed**********")
+
+      except:
+         print("!!!!!!!!!!!Transaction failed!!!!!!!!!")
 
       return render(request,"succsess.html")
